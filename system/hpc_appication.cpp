@@ -1,91 +1,73 @@
-#include <iostream>
-#include <vector>
-#include <chrono>
-#include <omp.h> // For OpenMP parallelism
-
+#include<bits/stdc++.h>
+#include<omp.h>
+#include<chrono>
 using namespace std;
 using namespace std::chrono;
 
-void sequential_lr(const vector<double> &x, const vector<double> &y, double &m, double &c, double &time)
-{
+
+void seq_linear_regression(vector<double>&x , vector<double>&y){
+    //sequential
+    cout<<"\nSequnetial:";
+    double sum_x=0.0,sum_xy=0.0,sum_y=0.0,sum_x2=0.0;
     int n = x.size();
-    double sum_x = 0.0, sum_y = 0.0, sum_xy = 0.0, sum_x2 = 0.0;
-
-    auto start = high_resolution_clock::now();
-
-    for (int i = 0; i < n; ++i)
-    {
-        sum_x += x[i];
-        sum_y += y[i];
-        sum_xy += x[i] * y[i];
-        sum_x2 += x[i] * x[i];
+    for(int i=0;i<n;i++){
+        sum_x+=x[i];
+        sum_y+=y[i];
+        sum_xy+=x[i]*y[i];
+        sum_x2+=x[i]*x[i];
     }
+    double m = (n*sum_xy-(sum_x*sum_y))/((n*sum_x2)-(sum_x*sum_x));
+    cout<<"\nSlope(Sequential):"<<m;
+    double c = (sum_y-(m*sum_x))/n;
+    cout<<"\nConstant(Sequential):"<<c;
+    cout<<endl;
 
-    m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-    c = (sum_y - m * sum_x) / n;
-
-    auto end = high_resolution_clock::now();
-    duration<double> elapsed = end - start;
-    time = elapsed.count();
 }
 
-void parallel_lr(const vector<double> &x, const vector<double> &y, double &m, double &c, double &time)
-{
+void par_linear_regression(vector<double>&x , vector<double>&y){
+    cout<<"\nParallel:";
+    double sum_x=0.0,sum_xy=0.0,sum_y=0.0,sum_x2=0.0;
     int n = x.size();
-    double sum_x = 0.0, sum_y = 0.0, sum_xy = 0.0, sum_x2 = 0.0;
-
-    auto start = high_resolution_clock::now();
-
-    #pragma omp parallel for reduction(+ : sum_x, sum_y, sum_xy, sum_x2)
-    for (int i = 0; i < n; ++i)
-    {
-        sum_x += x[i];
-        sum_y += y[i];
-        sum_xy += x[i] * y[i];
-        sum_x2 += x[i] * x[i];
+    #pragma omp parallel for reduction(+ : sum_x,sum_y,sum_xy,sum_x2)
+    for(int i=0;i<n;i++){
+        sum_x+=x[i];
+        sum_y+=y[i];
+        sum_xy+=x[i]*y[i];
+        sum_x2+=x[i]*x[i];
     }
-
-    m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-    c = (sum_y - m * sum_x) / n;
-
-    auto end = high_resolution_clock::now();
-    duration<double> elapsed = end - start;
-    time = elapsed.count();
+    double m = (n*sum_xy-(sum_x*sum_y))/((n*sum_x2)-(sum_x*sum_x));
+    cout<<"\nSlope(Parallel):"<<m;
+    double c = (sum_y-(m*sum_x))/n;
+    cout<<"\nConstant(Parallel):"<<c;
+    cout<<endl;
 }
 
-int main()
-{
-    int n;
-    cout << "Enter the number of data points: ";
-    cin >> n;
+int main(){
+    int size;
+    cout<<"\nEnter Points Size:";
+    cin>>size;
+    vector<double>X(size);
+    vector<double>Y(size);
 
-    vector<double> x(n), y(n);
-
-    for (int i = 0; i < n; ++i)
-    {
-        x[i] = rand() % 10000;
-        y[i] = 3 * x[i] + 7 + rand() % 50; // adding slight noise
+    for(int i=0;i<size;i++){
+        X[i] = rand()%1000;
+        Y[i] = X[i]*3+7+rand()%50;
     }
 
-    int threads = omp_get_max_threads();
-    cout << "System will use up to " << threads << " threads.\n";
+    auto t1 = high_resolution_clock::now();
+    seq_linear_regression(X,Y);
+    auto t2 = high_resolution_clock::now();
 
-    double m_seq, c_seq, time_seq;
-    double m_par, c_par, time_par;
+    auto t3 = high_resolution_clock::now();
+    par_linear_regression(X,Y);
+    auto t4 = high_resolution_clock::now();
 
-    sequential_lr(x, y, m_seq, c_seq, time_seq);
-    parallel_lr(x, y, m_par, c_par, time_par);
 
-    cout << "\nSequential Linear Regression:\n";
-    cout << "  m = " << m_seq << ", c = " << c_seq << ", Time = " << time_seq << " seconds\n";
+    cout<<"\n\nSequential_linear_regresion:"<<(duration_cast<milliseconds>(t2-t1)).count()<<"ms";
+    cout<<"\nParallel_linear_regresion:"<<(duration_cast<milliseconds>(t4-t3)).count()<<"ms";
+    
 
-    cout << "Parallel Linear Regression:\n";
-    cout << "  m = " << m_par << ", c = " << c_par << ", Time = " << time_par << " seconds\n";
 
-    if (time_par > 0)
-        cout << "Speedup: " << time_seq / time_par << endl;
-    else
-        cout << "Speedup: N/A (parallel time too small to measure reliably)\n";
 
-    return 0;
+
 }
