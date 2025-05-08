@@ -1,15 +1,17 @@
 #include <iostream>
 #include <vector>
-#include <omp.h>
+#include <chrono>
+#include <omp.h> // For OpenMP parallelism
 
 using namespace std;
+using namespace std::chrono;
 
 void sequential_lr(const vector<double> &x, const vector<double> &y, double &m, double &c, double &time)
 {
     int n = x.size();
     double sum_x = 0.0, sum_y = 0.0, sum_xy = 0.0, sum_x2 = 0.0;
 
-    double start = omp_get_wtime();
+    auto start = high_resolution_clock::now();
 
     for (int i = 0; i < n; ++i)
     {
@@ -22,8 +24,9 @@ void sequential_lr(const vector<double> &x, const vector<double> &y, double &m, 
     m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
     c = (sum_y - m * sum_x) / n;
 
-    double end = omp_get_wtime();
-    time = end - start;
+    auto end = high_resolution_clock::now();
+    duration<double> elapsed = end - start;
+    time = elapsed.count();
 }
 
 void parallel_lr(const vector<double> &x, const vector<double> &y, double &m, double &c, double &time)
@@ -31,7 +34,7 @@ void parallel_lr(const vector<double> &x, const vector<double> &y, double &m, do
     int n = x.size();
     double sum_x = 0.0, sum_y = 0.0, sum_xy = 0.0, sum_x2 = 0.0;
 
-    double start = omp_get_wtime();
+    auto start = high_resolution_clock::now();
 
     #pragma omp parallel for reduction(+ : sum_x, sum_y, sum_xy, sum_x2)
     for (int i = 0; i < n; ++i)
@@ -45,20 +48,23 @@ void parallel_lr(const vector<double> &x, const vector<double> &y, double &m, do
     m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
     c = (sum_y - m * sum_x) / n;
 
-    double end = omp_get_wtime();
-    time = end - start;
+    auto end = high_resolution_clock::now();
+    duration<double> elapsed = end - start;
+    time = elapsed.count();
 }
 
-int main() {
+int main()
+{
     int n;
     cout << "Enter the number of data points: ";
     cin >> n;
 
     vector<double> x(n), y(n);
 
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i)
+    {
         x[i] = rand() % 10000;
-        y[i] = 3 * x[i] + 7 + rand() % 50;
+        y[i] = 3 * x[i] + 7 + rand() % 50; // adding slight noise
     }
 
     int threads = omp_get_max_threads();
@@ -82,5 +88,4 @@ int main() {
         cout << "Speedup: N/A (parallel time too small to measure reliably)\n";
 
     return 0;
-   }
-
+}
